@@ -1,0 +1,146 @@
+The cpmd2cube.x program has been created by Walter Silvestri 
+with further updates and rewrites from Ari P. Seitsonen, 
+Mauro Boero and Axel Kohlmeyer and creates a pdb file and 
+a gaussian cube file from a density/wannier file as produced 
+by CPMD.
+
+To compile it, you have to create a Makefile by running
+the Configure program. Here is the corresponding help message:
+
+./Configure [options] Name_of_Configuration
+where the name of the configuration is
+  Linux-PC-GFORTRAN       Linux-PC-GFORTRAN-FFTW
+  Linux-PC-IFORT          Linux-PC-IFORT-FFTW
+  Linux-PC-PGI            Linux-PC-IFC7
+  Linux-Alpha             Hitachi-SR8000-Europe
+  Linux-AMD64-PGI         Hitachi-SR8000-Japan
+  Linux-AMD64-IFORT       Hitachi-SR11000-J1
+  Linux-Itanium2-IFORT    Hitachi-SR11000-K1
+  IBM-SP3                 IBM-SP4
+  IBM-AIX                 Cray-T3E
+  IBM-270                 Fujitsu-VPP5000-Japan
+  DEC-Alpha               SGI-Origin-2000
+  MAC-OSX-G5              SGI-ALTIX3900
+  NEC-SX5                 SUN-ULTRA3-32bit
+  NEC-SX6                 SUN-ULTRA3-64bit
+  IBM-PWR5-Linux          NEC-SX6-ES
+  IBM-BGL-FEN             IBM-PWR5-AIX
+  IBM-BGP-FEN             IBM-PWR6-AIX
+
+
+Description of options:
+  -makefile (-m) Create the file Makefile in DEST directory
+  -SRC=<dir>     Source files directory (default=.)
+  -DEST=<dir>    Object files directory (default=.)
+
+Tuneable CPPFLAGS:
+  -DFFT_FFTW       : use fftw instead (note you need fftw-2 _NOT_ fftw3, double precision)
+  -D_OLD_SORT      : fall back on old FORTRAN66 style quicksort.
+  -D_NO_DERFC      : replace erfc based switching function with tanh in cutcube 
+
+Note: If you want to compile cpmd2cube.x in a different directory
+      than the source files (needs a make that understands VPATH), use:
+         ./Configure -DEST=destdir SUN > destdir/Makefile
+      or ./Configure -m -DEST=destdir SUN
+      and then cd destdir
+
+After that you should should adapt the Makefile to your local setup
+and compile the program with 'make'. 
+
+FFTW-2 support.  
+Apart from the machine specific (or generic CPMD) FFT library, you can 
+also compile cpmd and cpmd2cube using fftw (version 2 only).
+For that change -DFFT_XXXX (e.g. -DFFT_DEFAULT) to -DFFT_FFTW
+and add -ldfftw to LIBS=. fftw2 has to be compiled in double
+precision with --enable-double (if you use --enable-type-prefix,
+please change -lfftw to -ldfftw).
+
+Usage:
+
+./cpmd2cube.x <option> filename
+
+for wannier files, you can also process the full set in one step, e.g. with:
+
+./cpmd2cube.x -wave WANNIER_1.*
+
+  If you specify more than one file, they MUST have the
+  same g-vectors and (for the moment) atom positions
+  The program will create one cube file for each file
+  and one pdb file with the atom positions
+
+further options:
+
+-info   gives information about the file, like which atoms are in there, 
+        the lattice vectors, etc.  
+-rho    store the density instead of the wavefunction into the cube file.
+-dens   alias for -dens
+
+-wave   generate the wavefunction, otherwise it generates the density
+-psi    alias for -wave
+
+-v <verbosity>:
+        <verbosity> is 0-3 (default is 1)
+-halfmesh: (on by default)
+        leave out half the grid points in each direction. 
+        reduces the file size by 1/8th. 
+        the conversion is still done on the full grid,
+        so the output is usually quite smooth.
+-fullmesh: 
+        use full grid (cancels -halfmesh) to resolve
+        fine structures in the density/wavefunction.
+
+-trim <threshold>:
+      write a minimal cube file including all data points which have an
+      absolute value above <treshold>. Can reduce the file size dramatically
+      for isolated molecules and localized orbitals. incompatible with -rep.
+
+-normpot:
+      correct for the fact, that the integrated electrostatic potential
+      is not zero. To be used when converting ELPOT files.
+
+-nocoords:
+      do not output any coordinates to the cube file. only puts a dummy
+      atom at the origin, since some codes need at least one atom.
+      main application is to generate smaller files on QM/MM runs.
+
+-o <prefix>:
+      specify the prefix of the name used for the cube and pdb-files
+
+-rep <n1> <n2> <n3>:
+        replicate the cell n<j> times along the <j>-th direction by periodicity
+
+-shift <r1> <r2> <r3>:
+        shift cube density by r1*a1+r2*a2+r3*a3
+
+-centre centre density around centre of mass of system.
+-center alias for -centre
+
+-inbox
+        put atoms inside unit cell centred around origin
+
+-double
+        read the density in double precision (default is single)
+--
+        last option. Useful if you have a file with the same name as an option
+
+-h  or  -?  or  -help  or  --help  or no files:
+      write this help
+
+
+
+trimcube is a small c utility that chops of pieces of a cube that 
+have very small or zero values everywhere and thus reducing the
+size of the files significantly. mostly useful for visualiztion of
+localized orbitals and electron densities. 
+author: axel kohlmeyer.
+
+cutcube.x is a small tool that reads in a cube file and then
+creates a 'mask' around selected atoms based on the respective
+(tabulated) covalent radius and a steepness parameter and then 
+multiplies this with the cubefile. thus it essentially offers
+a way to punch out a certain piece of a cube file, e.g. only
+the inner atoms in a reactive center in a QM/MM simulation.
+useful in combination with trimcube... 
+authors: katrin spiegel and axel kohlmeyer.
+
+

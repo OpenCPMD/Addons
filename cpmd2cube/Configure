@@ -1,0 +1,646 @@
+#!/bin/sh
+
+#-----------------------------------------------------------------------------#
+# Create a <<Makefile>> to compile <<cpmd2cube>>                              #
+#-----------------------------------------------------------------------------#
+
+mk_gtar_pkg () {
+    d=`date +%Y%m%d`
+    b=`basename $PWD`
+    cd ..
+    tar -c --exclude \*,v --exclude \*.bak --exclude \*~ --exclude CVS \
+        --exclude \*.o --exclude \*.a --exclude \*.x --exclude \*.log  \
+        --exclude \*.out --exclude \*.prj --exclude \*.chk             \
+        --exclude \*.orig --exclude \*.rej -zvvf $b-$d.tar.gz $b &&  \
+        echo successfully created $b-$d-tar.gz
+    cd $b
+    exit 0
+}
+
+
+# Display all configurations
+Message () {
+cat << EOF >&2
+./Configure [options] Name_of_Configuration
+where the name of the configuration is one of the following:
+  Linux-PC-GFORTRAN       Linux-PC-GFORTRAN-FFTW
+  Linux-PC-IFORT          Linux-PC-IFORT-FFTW
+  Linux-PC-PGI            Linux-Alpha
+  Linux-AMD64-IFORT       Linux-AMD64-PGI
+  Linux-IA64-IFORT        Linux-Itanium2-IFORT
+  Linux-x64_86-IFORT
+  Hitachi-SR8000-Europe   Hitachi-SR8000-Japan
+  Hitachi-SR11000-J1      Hitachi-SR11000-K1
+  Fujitsu-VPP5000-Japan   Fujitsu-PRIMERGY
+  Fujitsu-PRIMEQUEST      Fujitsu-FX10
+  NEC-SX5                 NEC-SX6
+  NEC-SX6-ES              NEC-SX7
+  SUN-ULTRA3-32bit        SUN-ULTRA3-64bit
+  IBM-PWR5-Linux          IBM-PWR7-Linux
+  IBM-BGL-FEN             IBM-PWR5-AIX
+  IBM-BGP-FEN             IBM-PWR6-AIX
+  IBM-BGQ-FEN             IBM-AIX
+  IBM-SP3                 IBM-PWR7-AIX
+  IBM-270                 IBM-SP4
+  IBM-x3750-Intel
+  DEC-Alpha               Cray-T3E
+  SGI-ALTIX3900           SGI-Origin-2000
+  MAC-OSX-G5
+ 
+
+Description of options:
+  -makefile (-m) Create the file Makefile in DEST directory
+  -SRC=<dir>     Source files directory (default=.)
+  -DEST=<dir>    Object files directory (default=.)
+  -gtar          Create tar.gz source package via GNU tar
+
+Tuneable CPPFLAGS:
+  -DFFT_FFTW       : use fftw instead (note you need fftw-2 _NOT_ fftw3, double precision)
+  -D_OLD_SORT      : fall back on old FORTRAN66 style quicksort.
+  -D_NO_DERFC      : replace erfc based switching function with tanh in cutcube 
+
+Note: If you want to compile cpmd2cube.x in a different directory
+      than the source files (needs a make that understands VPATH), use:
+         ./Configure -DEST=destdir SUN > destdir/Makefile
+      or ./Configure -m -DEST=destdir SUN
+      and then cd destdir; make
+EOF
+}
+
+
+# No argument given => Error
+if [ $# -eq 0 ]; then
+  Message
+  exit 2
+fi
+
+# Loop through the command line arguments
+i=1
+while [ $i -le $# ]; do
+  eval OPTION=\$$i
+  case ${OPTION} in
+    -makefile|-m)
+      makefile=1
+      ;;
+    -reconfig|-r)
+      reconfig=1
+      ;;
+    -DEST=*)
+      DEST=`echo $OPTION | cut -c2- | cut -d= -f 2`
+      ;;
+    -SRC=*)
+      SRC=`echo $OPTION | cut -c2- | cut -d= -f 2`
+      ;;
+    -gta*)
+      mk_gtar_pkg
+      exit 0
+      ;;
+    -*)
+      echo "Unknown option: ${OPTION}" >&2
+      Message
+      exit 1
+      ;;
+    *)
+      CONFIGURATION=${OPTION}
+  esac
+  i=`expr $i + 1`
+done
+
+# No configuration given
+if [ -z "${CONFIGURATION}" ]; then
+  echo "$0: No configuration give" >&2
+  Message
+  exit 3
+fi
+
+#-----------------------------------------------------------------------------#
+# Configurations                                                              #
+#-----------------------------------------------------------------------------#
+
+# By default we try to use nawk
+if [ -x /usr/bin/nawk ]; then
+  AWK='/usr/bin/nawk'
+else
+  AWK='awk'
+fi
+
+case ${CONFIGURATION}
+ in
+
+  "Linux-PC-PGI")
+    FC="pgf90"
+    FFLAGS="-D__PGI -DFFT_DEFAULT -fast -Mfree "
+    LFLAGS="-O -Bstatic "
+    LIBS=""
+    ;;
+
+  "Linux-PC-GFORTRAN")
+    FC="gfortran"
+    FFLAGS=" -ffree-form -D__GFORTRAN -DFFT_DEFAULT -std=gnu -O2 "
+    LFLAGS=""
+    LIBS=" "
+    ;;
+
+  "Linux-PC-GFORTRAN-FFTW")
+    FC="gfortran"
+    FFLAGS=" -ffree-form -D__GFORTRAN -DFFT_FFTW -std=gnu -O2 "
+    LFLAGS=""
+    LIBS=" -lfftw"
+    ;;
+
+  "Linux-PC-IFORT")
+    FC="ifort"
+    FFLAGS=" -FR -D__IFC -DFFT_DEFAULT -O -pc64 -funroll-loops -w90 -w95"
+    LFLAGS="-static-intel -O -w90 -w95 -pc64"
+    LIBS=" "
+    ;;
+
+  "Linux-x64_86-IFORT")
+    FC="ifort"
+    FFLAGS="-O -funroll-loops -D__IFORT -DFFT_DEFAULT"
+    LFLAGS="-O -static-intel -funroll-loops"
+    LIBS=" "
+    ;;
+
+  "Linux-PC-IFORT-FFTW")
+    FC="ifort"
+    FFLAGS=" -FR -D__IFC -DFFT_FFTW -O -tpp6 -w90 -w95 -pc64"
+    LFLAGS="-static-intel -O -pc64 -funroll-loops -w90 -w95 -pc64"
+    LIBS=" -lfftw"
+    ;;
+
+  "Linux-AMD64-PGI")
+    FC="pgf90"
+    FFLAGS="-r8 -pc=64 -Msignextend -D__alpha -DFFT_DEFAULT  -Mfree"
+    LFLAGS="-O "
+    LIBS=""
+    ;;
+
+  "Linux-AMD64-IFORT")
+    FC="ifort"
+    FFLAGS="-O2 -pc64 -funroll-loops -FR -D__alpha -D__IFC -DFFT_DEFAULT  "
+    LFLAGS="-O2 -static-intel -pc64 -funroll-loops"
+    LIBS=""
+    ;;
+
+  "Linux-Alpha")
+    FC="fort"
+    FFLAGS="-O -D__alpha -DFFT_DEFAULT  -free"
+    LFLAGS="-O"
+    LIBS=""
+    ;;
+
+  "Linux-Itanium2-IFORT")
+    FC="ifort"
+    FFLAGS="-r8 -O1 -tpp2 -pc64 -FR -D__IFC -DFFT_DEFAULT  "
+    LFLAGS="-O1 -Bstatic"
+    LIBS=""
+    ;;
+
+  "Linux-IA64-IFORT")
+    FC="ifort"
+    FFLAGS="-static-intel -O2 -pc64 -heap-arrays 64 -FR -D__IFC -DFFT_DEFAULT  "
+    LFLAGS="-O2 -static-intel"
+    LIBS=""
+    ;;
+
+  "Cray-T3E")
+    FC="f90 -f free"
+    FFLAGS="-D__T3E -DFFT_T3E -eI -F # -g # -R abcps -ei -m 0"
+    LFLAGS=
+    LIBS=
+    ;;
+
+  "IBM-AIX")
+    FC="xlf90"
+    FFLAGS="-WF,\"-D__AIX,-DFFT_ESSL\" -qsuffix=cpp=F -O -qmaxmem=32768 "
+    LFLAGS="-O -bmaxdata:32768000000 -bmaxstack:1500000000"
+    LIBS=" -lessl"
+    ;;
+
+  "IBM-SP3")
+    FC="xlf90 -O3 -qstrict  -qarch=pwr3 -qxlf77=leadzero "
+    FFLAGS="-WF,\"-D__AIX,-DFFT_ESSL\" -qsuffix=cpp=F -qmaxmem=32768 "
+    LFLAGS="-O3 -bmaxdata:2048000000 -bmaxstack:1500000000"
+    LIBS="-lessl -bbinder:/usr/lib/bind"
+    ;;
+
+  "IBM-SP4")
+    FC="xlf90 -O3 -qstrict  -qarch=pwr4 -qxlf77=leadzero "
+    FFLAGS="-WF,\"-D__AIX,-DFFT_ESSL\" -qsuffix=cpp=F -qmaxmem=32768 "
+    LFLAGS="-O3 -bmaxdata:2048000000 -bmaxstack:1500000000"
+    LIBS="-lessl -bbinder:/usr/lib/bind"
+    ;;
+
+  "IBM-PWR5-AIX")
+    FC="xlf90 -O3 -qstrict  -qarch=pwr5 -qxlf77=leadzero "
+    FFLAGS="-WF,\"-D__AIX,-DFFT_ESSL\" -qsuffix=cpp=F -qmaxmem=32768 "
+    LFLAGS="-O3 "
+    LIBS="-lessl "
+    ;;
+
+  "IBM-PWR6-AIX")
+    FC="xlf90 -O3 -qstrict  -qarch=pwr6 -qxlf77=leadzero "
+    FFLAGS="-WF,\"-D__AIX,-DFFT_ESSL\" -qsuffix=cpp=F -qmaxmem=32768 "
+    LFLAGS="-O3 "
+    LIBS="-lessl "
+    ;;
+
+  "IBM-PWR7-Linux")
+    FC="xlf90_r -O3 -qstrict  -qarch=pwr7 -qxlf77=leadzero "
+    FFLAGS="-WF,\"-D__PWRLinux,-DFFT_ESSL\" -qsuffix=cpp=F -qmaxmem=32768 "
+    LFLAGS="-O3 "
+    LIBS="-lessl "
+    ;;
+
+  "IBM-PWR7-AIX")
+    FC="xlf90 -O2 -q64 -qmaxmem=131072 -qtune=pwr7 -qarch=pwr7 -qnosave"
+    FFLAGS="-WF,\"-D__AIX,-DFFT_ESSL\" -qsuffix=cpp=F -qmaxmem=131072 "
+    LFLAGS="-O2 "
+    LIBS="-lessl "
+    ;;
+
+  "IBM-PWR5-Linux")
+    FC="xlf90 -O3 -qstrict  -qarch=pwr5 -qxlf77=leadzero "
+    FFLAGS="-WF,\"-D__PWRLinux,-DFFT_ESSL\" -qsuffix=cpp=F -qmaxmem=32768 "
+    LFLAGS="-O3 "
+    LIBS="-lessl "
+    ;;
+
+  "IBM-BGL-FEN")
+    FC="xlf90 -O3 -qstrict  -qarch=auto -qxlf77=leadzero "
+    FFLAGS="-WF,\"-D__PWRLinux,-DFFT_FFTW\" -qsuffix=cpp=F -qmaxmem=32768 "
+    LFLAGS="-O3 "
+    LIBS="-lfftw "
+    ;;
+
+  "IBM-BGP-FEN")
+    FC="xlf90 -O3 -qstrict  -qarch=auto -qxlf77=leadzero "
+    FFLAGS="-WF,\"-D__PWRLinux,-DFFT_ESSL\" -qsuffix=cpp=F -qmaxmem=32768 "
+    LFLAGS="-O3 "
+    LIBS="-lessl "
+    ;;
+
+  "IBM-BGQ-FEN")
+    FC="xlf90 -O3 -qstrict -qhot -qnosave -qarch=auto -qxlf77=leadzero "
+    FFLAGS="-WF,\"-D__PWRLinux,-DFFT_DEFAULT\" -qsuffix=cpp=F -qmaxmem=32768 "
+    LFLAGS="-O3 "
+    LIBS=""
+    ;;
+
+  "IBM-270")
+    FC="xlf_r  -O3 -qstrict -qarch=pwr3"
+    FFLAGS="-D__IBM -DFFT_ESSL -qmaxmem=32768 "
+    LFLAGS="-bbinder:/usr/lib/bind -bmaxdata:2048000000 -qarch=pwr3"
+    LIBS="-L/usr/local/lapack -llapack_pwr3 -lesslsmp -llapack_pwr3"
+    ;;
+
+  "IBM-x3750-Intel")
+    FC="ifort"
+    FFLAGS="-O2 -pc64 -funroll-loops -heap-arrays 64 -FR -D__IFC -DFFT_DEFAULT  "
+    LFLAGS="-O2 -static-intel"
+    LIBS="-mkl=sequential"
+    ;;
+
+  "Hitachi-SR8000-Europe")
+    FC="f90"
+    FFLAGS="-D__SR8000 -DFFT_DEFAULT -W0,\"opt(o(ss))\" -64 -noparallel -free"
+    LFLAGS="-64 -noparallel"
+    LIBS=""
+    ;;
+
+  "Hitachi-SR8000-Japan")
+    FC="xf90"
+    FFLAGS="-D__SR8000 -DFFT_DEFAULT -Os -64 -noparallel -free"
+    LFLAGS="-64 -noparallel -free"
+    LIBS=""
+    ;;
+
+  "Hitachi-SR11000-J1")
+    FC="f90"
+    FFLAGS="-D__SR11000 -DFFT_DEFAULT -O3 -64 -model=J1 -nolimit -noparallel -free"
+    LFLAGS="-64 -model=J1 -nolimit -noparallel -free"
+    LIBS=""
+    ;;
+
+  "Hitachi-SR11000-K1")
+    FC="f90"
+    FFLAGS="-D__SR11000 -DFFT_DEFAULT -O3 -64 -model=K1 -nolimit -noparallel -free"
+    LFLAGS="-64 -model=K1 -nolimit -noparallel -free"
+    LIBS=""
+    ;;
+
+  "Fujitsu-VPP5000-Japan")
+    FC="vppfrt"
+# if frt is not recognized by your machine, try vppfrt
+    FC="frt"
+    FFLAGS="-Wp,-D__VPP5000,-DFFT_DEFAULT -Am -Aw -Sw -c -O5 -Kfast -X9 -Free -No -Os,-X,-I"
+    LFLAGS=
+    LIBS="-lblasvp"
+    ;;
+
+  "Fujitsu-PRIMERGY")
+    FC="frt"
+    FFLAGS="-D__PRIMERGY -DFFT_DEFAULT -Aw -Kfast -X9 -Kocl -Qp -Esfu"
+    LFLAGS=
+    LIBS="-SSL2BLAMP -lblasvp"
+    ;;
+
+  "Fujitsu-PRIMEQUEST")
+    FC="frt"
+    FFLAGS="-D__PRIMEQUEST -DFFT_DEFAULT -Aw -O3 -Kfast -X9"
+    LFLAGS=
+    LIBS="-SSL2 -lblasvp"
+    ;;
+
+  "Fujitsu-FX10")
+    FC="frtpx"
+    FFLAGS="-D__ALPHALINUX -D__INTEL -DFFT_DEFAULT -Aw -O3 -Kfast,openmp -Kopenmp -Kparallel -X9 -Free -Cpp"
+    LFLAGS=
+    LIBS="-SSL2BLAMP -lblasvp"
+    ;;
+
+  "SGI-Origin-2000")
+    FC="f90 -freeform"
+    FFLAGS="-D__SGI -DFFT_DEFAULT -O3 -64 -mips4"
+    LFLAGS="-64 -mips4"
+    LIBS=""
+    ;;
+
+  "SGI-ALTIX3900")
+    FC="ifort -O3 -r8 -free -align dcommons -unroll -cm"
+    FFLAGS="-D__Linux -D__ALTIX -DFFT_DEFAULT -DPOINTER8"
+    LFLAGS="-i-static "
+    LIBS=""
+    ;; 
+
+  "DEC-Alpha")
+    FC="f90"
+    FFLAGS="-D__alpha -DFFT_DEFAULT -free"
+    LFLAGS="-O"
+    LIBS=""
+    ;;
+
+  SUN-ULTRA3-32*)
+    FC="f90"
+    FFLAGS=" -D__SUN -DFFT_DEFAULT  -fast -free -fns=no -xtarget=ultra3 -xarch=v8plusb"
+    LFLAGS="-xtarget=ultra3 -xarch=v8plusb -fast"
+    LIBS="-xlibmopt "
+    ;;
+
+  SUN-ULTRA3-64*)
+    FC="f90"
+    FFLAGS=" -D__SUN -DFFT_DEFAULT  -fast -free -fns=no -xtarget=ultra3 -xarch=v8plusb"
+    LFLAGS="-xtarget=ultra3 -xarch=v9b -fast"
+    LIBS="-xlibmopt "
+    ;;
+
+  "MAC-OSX-G5")
+    FC="xlf90 -O3 -qstrict  -qarch=auto -qxlf77=leadzero  -qmaxmem=32768 -qextname=dscal"
+    FFLAGS="-WF,\"-D__OSX,-DFFT_DEFAULT\" -qsuffix=cpp=F "
+    LFLAGS="-O3 "
+    LIBS="-Wl,-framework -Wl,vecLib"
+    ;;
+
+  "MAC-OSX-GNU")
+    FC="gfortran"
+    FFLAGS=" -ffree-form -D__GFORTRAN -DFFT_DEFAULT -O2 "
+    LFLAGS="-O3 "
+    LIBS="-framework Accelerate"
+    ;;
+
+  "NEC-SX5")
+    FC="sxf90"
+    FFLAGS="-D__NEC -USX -DFFT_DEFAULT  -sx5 -ew -float0 -f0 -Nftrace \
+            -V -R5 -Cvopt -Pstatic -pi -I /sx5/usr/include \
+            -Wf\"-pvctl noassume loopcnt=99999999 fullmsg vr256 \
+             vwork=static vworksz=4M novlchk noverrchk\" "
+    LFLAGS="-sx5 -ew -float0 -f4 -Nftrace -Pstatic -V -R5 -Cvopt -Cssafe \
+           -Wl\"-h lib_cyclic -h muldefs\" "
+    LIBS=""
+    ;;
+
+  "NEC-SX6")
+    FC="sxf90"
+    FFLAGS="-D__NEC -USX -DFFT_DEFAULT  -ew -float0 -f4 -Nftrace \
+           -V -R5 -P static -Cvopt -pi -Wf\"-pvctl noassume loopcnt=99999999 \
+           fullmsg vr256 vwork=static vworksz=4M novlchk noverrchk\" "
+    LFLAGS="-ew -float0 -f4 -Popenmp -Nftrace -P static -V -R5 -Cvopt -Cssafe \
+           -Wl\"-h lib_cyclic -h muldefs\" "
+    LIBS=""
+    ;;
+
+  "NEC-SX6-ES")
+    FC="esf90"
+    FFLAGS="-D__NEC -USX -DFFT_DEFAULT  -ew -float0 -f4 -Nftrace \
+           -V -R5 -P static -Cvopt -pi -Wf\"-pvctl noassume loopcnt=99999999 \
+           fullmsg vr256 vwork=static vworksz=4M novlchk noverrchk\" "
+    LFLAGS="-ew -float0 -f4 -Popenmp -Nftrace -P static -V -R5 -Cvopt -Cssafe \
+           -Wl\"-h lib_cyclic -h muldefs\" "
+    LIBS=""
+     ;;
+
+  "NEC-SX7")
+    FC="sxf90"
+    FFLAGS="-D__NEC -USX -DFFT_DEFAULT  -clear -ew -float0 -f0 -Popenmp -Nftrace \
+           -V -R5 -Cvopt -Wf\"-pvctl noassume loopcnt=99999999 fullmsg vr256 \
+           vwork=static vworksz=4M novlchk noverrchk\" "
+    LFLAGS="-Wl\"-h lib_cyclic -h muldefs\" "
+    LIBS=""
+    ;;
+
+  *)
+    echo "$0: Unknown configuration ${CONFIGURATION}" >&2
+    Message
+    exit 4
+    ;;
+
+esac
+
+#Default for DEST or SRC is .
+DEST=${DEST:-'.'}
+if [ $DEST != "." ]; then
+  if [ -z "$SRC" ]; then
+      SRC=`pwd`
+  fi
+fi
+SRC=${SRC:-'.'}
+
+echo "The source directory is: $SRC" >&2
+echo "The object directory is: $DEST" >&2
+  
+
+#Check if DEST directory exists.
+if [ ! -d ${DEST} ]; then
+   echo "The directory ${DEST} does not exist" >&2
+  exit 1
+fi
+if [ ! -w ${DEST} ]; then
+  echo "The directory ${DEST} has no write permission" >&2
+  exit 1
+fi
+
+# save old makefile for reconfig
+if [ $reconfig ]; then
+   if [ ! -e ${DEST}/Makefile ]; then 
+      echo "There is no old Makefile in ${DEST}. Reconfig not possible." >&2
+      exit 1
+   fi
+   mv ${DEST}/Makefile ${DEST}/Makefile.bak
+fi
+#Create Makefile if output
+if [ $makefile ]; then
+  echo "Creation of Makefile: ${DEST}/Makefile" >&2
+  exec 3>${DEST}/Makefile
+else
+  echo "Use standard output for the Makefile." >&2
+  exec 3>&1
+fi
+
+# for make reconfig, we take the header section of the old makefile
+# instead of the default and only recreate the second part from scratch.
+if [ $reconfig ]; then
+   echo '#----------------------------------------------------------------------------'    >&3
+   sed -n -e '/Makefile for cpmd2cube.x/,/End of Configuration/p' ${DEST}/Makefile.bak     >&3
+else
+
+cat << EOF >&3
+#-----------------------------------------------------------------------------#
+# Makefile for cpmd2cube.x
+# Configuration: ${CONFIGURATION}
+# Creation of Makefile: `date '+%b %e %Y'`
+# on `uname -a`
+# Author: `who am i | cut -d' ' -f 1`
+#----------------------------------------------------------------------------
+#
+SHELL = /bin/sh
+#
+#--------------- Configuration
+FC	= ${FC}
+FFLAGS	= ${FFLAGS}
+LFLAGS	= ${LFLAGS}
+LIBS	= ${LIBS}
+# uncomment and set only if needed
+#CC	= cc
+#CFLAGS	= 
+#--------------- End of Configuration
+EOF
+fi
+
+cat << EOF >&3
+##############
+
+EXE	= cpmd2cube.x
+
+OBJECTS	= \\
+    kinds.o periodic_table.o util.o grids.o cpmd2cube.o \\
+    grid_types.o atom_types.o readwrites.o \\
+    fftsg_lib.o fft_tools.o fftsg.o
+
+CFGDEST = ${DEST}
+CFGMACH = $CONFIGURATION
+SRC=${SRC}
+
+#############################
+
+all:  \$(EXE) trimcube.x cutcube.x
+
+\$(EXE): main.o \$(OBJECTS)
+	 \$(FC) -o \$(EXE) \$(LFLAGS) main.o \$(OBJECTS) \$(LIBS)
+
+cutcube.x: cutcube.o \$(OBJECTS)
+	 \$(FC) -o \$@ \$(LFLAGS) cutcube.o \$(OBJECTS) \$(LIBS)
+
+trimcube.x: trimcube.o
+	\$(CC) \$(CFLAGS) -o \$@ trimcube.o 
+#############################
+clean:
+	rm -f *.o *.mod *.L *~
+
+realclean: clean
+	rm -f *.x
+
+# Create a new makefile with new dependencies but retain the configuration.
+reconfig:
+	( cd \$(SRC) ; \$(SHELL) ./Configure -r -m -SRC=\$(SRC) -DEST=\$(CFGDEST) \$(CFGMACH) ; cd \$(CFGDEST) )
+
+#############################
+atom_types.o:  \$(SRC)/atom_types.F90
+	\$(FC) -c \$(FFLAGS) \$(SRC)/\$*.F90
+
+cpmd2cube.o:   \$(SRC)/cpmd2cube.F90
+	\$(FC) -c \$(FFLAGS) \$(SRC)/\$*.F90
+
+cutcube.o:   \$(SRC)/cutcube.F90
+	\$(FC) -c \$(FFLAGS) \$(SRC)/\$*.F90
+
+fft_tools.o:   \$(SRC)/fft_tools.F90
+	\$(FC) -c \$(FFLAGS) \$(SRC)/\$*.F90
+
+grid_types.o:  \$(SRC)/grid_types.F90
+	\$(FC) -c \$(FFLAGS) \$(SRC)/\$*.F90
+
+grids.o:       \$(SRC)/grids.F90
+	\$(FC) -c \$(FFLAGS) \$(SRC)/\$*.F90
+
+main.o:        \$(SRC)/main.F90
+	\$(FC) -c \$(FFLAGS) \$(SRC)/\$*.F90
+
+periodic_table.o: \$(SRC)/periodic_table.F90
+	\$(FC) -c \$(FFLAGS) \$(SRC)/\$*.F90
+
+readwrites.o:  \$(SRC)/readwrites.F90
+	\$(FC) -c \$(FFLAGS) \$(SRC)/\$*.F90
+
+util.o:       \$(SRC)/util.F90
+	\$(FC) -c \$(FFLAGS) \$(SRC)/\$*.F90
+
+kinds.o:      \$(SRC)/kinds.F90
+	\$(FC) -c \$(FFLAGS) \$(SRC)/\$*.F90
+
+fftsg.o:      \$(SRC)/fftsg.F90
+	\$(FC) -c \$(FFLAGS) \$(SRC)/\$*.F90
+
+fftsg_lib.o:  \$(SRC)/fftsg_lib.F90
+	\$(FC) -c \$(FFLAGS) \$(SRC)/\$*.F90
+
+trimcube.o:	\$(SRC)/trimcube.c
+	\$(CC) -c \$(CFLAGS) \$(SRC)/\$*.c
+
+# Dependencies
+atom_types.o:  kinds.o \\
+		periodic_table.o
+
+cpmd2cube.o:   atom_types.o \\
+		fft_tools.o \\
+		grid_types.o \\
+		grids.o \\
+		kinds.o \\
+		periodic_table.o \\
+		readwrites.o \\
+		util.o
+
+cutcube.o:	kinds.o \\
+		periodic_table.o
+
+fft_tools.o:   grid_types.o \\
+		fftsg_lib.o \\
+		kinds.o
+
+grid_types.o:  kinds.o
+
+grids.o:       grid_types.o \\
+		kinds.o \\
+		util.o
+
+main.o:        cpmd2cube.o
+
+periodic_table.o: kinds.o
+
+readwrites.o:  atom_types.o \\
+		grid_types.o \\
+		kinds.o
+
+util.o:       kinds.o
+
+EOF
