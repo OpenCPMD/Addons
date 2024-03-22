@@ -85,15 +85,8 @@ SUBROUTINE ctrig ( n, trig, after, before, now, isign, ic )
   angle = isign * twopi / DBLE(n)
   trig ( 1, 1 ) = 1._dbl
   trig ( 2, 1 ) = 0._dbl
-#if defined ( __NEC )
 !$OMP parallel do private(i)
-#endif
-#if defined ( __VPP5000 )
 !OCL NOALIAS
-#endif
-#if defined ( __SR11000 )
-*poption parallel, tlocal(i)
-#endif
   DO i = 1, n - 1
     trig ( 1, i + 1 ) = cos ( DBLE(i) * angle )
     trig ( 2, i + 1 ) = sin ( DBLE(i) * angle )

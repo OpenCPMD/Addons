@@ -15,7 +15,7 @@ CONTAINS
     INTEGER:: M
     CHARACTER(len=*) :: STRING
 
-#if defined ( __AIX ) || defined ( __SR8000 ) || defined ( __SR11000 ) \
+#if defined ( __AIX ) \
  || defined ( __IFC ) || defined ( __NEC )    || defined ( __SGI ) \
  || defined ( __VPP5000 ) || defined ( __alpha ) || defined(__SUN) \
  || defined(__HP) || defined ( __OSX ) || defined ( __ALTIX )      \

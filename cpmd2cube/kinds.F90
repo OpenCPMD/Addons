@@ -12,11 +12,7 @@ MODULE kinds
 !!     - NAG_F90
 !!     - SUN
 !!     - SGI Origin 2000
-!!     - HITACHI SR8000 (Europe)
-!!     - HITACHI SR8000 (Japan)
-!!     - HITACHI SR11000 - K1 model (Japan)
-!!     - HITACHI SR11000 - J1 model (Japan)
-!!     - FUJITSU VPP5000 (Japan)
+!!     - FUJITSU FUGAKU (Japan)
 ! ----------------------------------------------------------------------
   
   IMPLICIT NONE

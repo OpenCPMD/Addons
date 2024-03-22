@@ -25,26 +25,22 @@ cat << EOF >&2
 where the name of the configuration is one of the following:
   Linux-PC-GFORTRAN       Linux-PC-GFORTRAN-FFTW
   Linux-PC-IFORT          Linux-PC-IFORT-FFTW
-  Linux-PC-PGI            Linux-Alpha
+  Linux-PC-IFX-LLVM       Linux-PC-IFX-LLVM-FFTW
+  Linux-PC-PGI            
   Linux-AMD64-IFORT       Linux-AMD64-PGI
-  Linux-IA64-IFORT        Linux-Itanium2-IFORT
-  Linux-x64_86-IFORT
-  Hitachi-SR8000-Europe   Hitachi-SR8000-Japan
-  Hitachi-SR11000-J1      Hitachi-SR11000-K1
-  Fujitsu-VPP5000-Japan   Fujitsu-PRIMERGY
-  Fujitsu-PRIMEQUEST      Fujitsu-FX10
-  NEC-SX5                 NEC-SX6
-  NEC-SX6-ES              NEC-SX7
-  SUN-ULTRA3-32bit        SUN-ULTRA3-64bit
-  IBM-PWR5-Linux          IBM-PWR7-Linux
-  IBM-BGL-FEN             IBM-PWR5-AIX
-  IBM-BGP-FEN             IBM-PWR6-AIX
-  IBM-BGQ-FEN             IBM-AIX
-  IBM-SP3                 IBM-PWR7-AIX
-  IBM-270                 IBM-SP4
-  IBM-x3750-Intel
-  DEC-Alpha               Cray-T3E
-  SGI-ALTIX3900           SGI-Origin-2000
+  Linux-IA64-IFORT        
+  Fujitsu-PRIMERGY        Fujitsu-PRIMEQUEST
+  Fujitsu-FX10
+  NEC-SX6                 NEC-SX6-ES
+  NEC-SX7
+  SUN-ULTRA3-64bit
+  IBM-PWR6-AIX            IBM-PWR6-AIX
+  IBM-PWR7-Linux          IBM-PWR7-AIX 
+  IBM-BGP-FEN             IBM-BGQ-FEN
+  IBM-AIX                 IBM-x3750-Intel
+  IBM-270                 
+  Cray-T3E
+  SGI-ALTIX3900           
   MAC-OSX-G5
  
 
@@ -136,37 +132,44 @@ case ${CONFIGURATION}
 
   "Linux-PC-GFORTRAN")
     FC="gfortran"
-    FFLAGS=" -ffree-form -D__GFORTRAN -DFFT_DEFAULT -std=gnu -O2 "
+    FFLAGS=" -O2 -Wall -falign-commons -funroll-loops -mtune=native -ffree-form -D__GFORTRAN -DFFT_DEFAULT -std=gnu"
     LFLAGS=""
     LIBS=" "
     ;;
 
   "Linux-PC-GFORTRAN-FFTW")
     FC="gfortran"
-    FFLAGS=" -ffree-form -D__GFORTRAN -DFFT_FFTW -std=gnu -O2 "
+    FFLAGS=" -O2 -Wall -falign-commons -funroll-loops -mtune=native -ffree-form -D__GFORTRAN -DFFT_FFTW -std=gnu"
     LFLAGS=""
-    LIBS=" -lfftw"
+    LIBS=" -lfftw -lfftw3"
     ;;
 
   "Linux-PC-IFORT")
     FC="ifort"
-    FFLAGS=" -FR -D__IFC -DFFT_DEFAULT -O -pc64 -funroll-loops -w90 -w95"
-    LFLAGS="-static-intel -O -w90 -w95 -pc64"
+    FFLAGS=" -FR -D__IFC -DFFT_DEFAULT -O2 -pc64 -funroll-loops -heap-arrays 64 -align array64byte"
+    LFLAGS="-static-intel -O2  -pc64 -funroll-loops -heap-arrays 64 -align array64byte"
     LIBS=" "
     ;;
 
-  "Linux-x64_86-IFORT")
-    FC="ifort"
-    FFLAGS="-O -funroll-loops -D__IFORT -DFFT_DEFAULT"
-    LFLAGS="-O -static-intel -funroll-loops"
+ "Linux-PC-IFX-LLVM")
+    FC="ifx"
+    FFLAGS=" -FR -D__IFC -DFFT_DEFAULT -O2 -pc64 -funroll-loops -fpp -heap-arrays 64 -align array64byte -xHost"
+    LFLAGS="-static-intel -O2  -pc64 -funroll-loops -fpp -heap-arrays 64 -align array64byte -xHost"
     LIBS=" "
     ;;
 
   "Linux-PC-IFORT-FFTW")
     FC="ifort"
-    FFLAGS=" -FR -D__IFC -DFFT_FFTW -O -tpp6 -w90 -w95 -pc64"
+    FFLAGS=" -FR -D__IFC -DFFT_FFTW -O -pc64 -fpp -heap-arrays 64 -align array64byte -xHost"
     LFLAGS="-static-intel -O -pc64 -funroll-loops -w90 -w95 -pc64"
     LIBS=" -lfftw"
+    ;;
+
+"Linux-PC-IFX-LLVM-FFTW")
+    FC="ifx"
+    FFLAGS=" -FR -D__IFC -DFFT_FFTW -O -pc64 -fpp -heap-arrays 64 -align array64byte -xHost"
+    LFLAGS="-static-intel -O -pc64 -funroll-loops -pc64 -fpp -heap-arrays 64 -align array64byte -xHost"
+    LIBS=" -lfftw -lfftw3"
     ;;
 
   "Linux-AMD64-PGI")
@@ -178,22 +181,8 @@ case ${CONFIGURATION}
 
   "Linux-AMD64-IFORT")
     FC="ifort"
-    FFLAGS="-O2 -pc64 -funroll-loops -FR -D__alpha -D__IFC -DFFT_DEFAULT  "
-    LFLAGS="-O2 -static-intel -pc64 -funroll-loops"
-    LIBS=""
-    ;;
-
-  "Linux-Alpha")
-    FC="fort"
-    FFLAGS="-O -D__alpha -DFFT_DEFAULT  -free"
-    LFLAGS="-O"
-    LIBS=""
-    ;;
-
-  "Linux-Itanium2-IFORT")
-    FC="ifort"
-    FFLAGS="-r8 -O1 -tpp2 -pc64 -FR -D__IFC -DFFT_DEFAULT  "
-    LFLAGS="-O1 -Bstatic"
+    FFLAGS="-O2 -pc64 -funroll-loops -heap-arrays 64 -align array64byte -FR -D__alpha -D__IFC -DFFT_DEFAULT  "
+    LFLAGS="-O2 -static-intel -pc64 -funroll-loops -heap-arrays 64 -align array64byte"
     LIBS=""
     ;;
 
@@ -218,27 +207,6 @@ case ${CONFIGURATION}
     LIBS=" -lessl"
     ;;
 
-  "IBM-SP3")
-    FC="xlf90 -O3 -qstrict  -qarch=pwr3 -qxlf77=leadzero "
-    FFLAGS="-WF,\"-D__AIX,-DFFT_ESSL\" -qsuffix=cpp=F -qmaxmem=32768 "
-    LFLAGS="-O3 -bmaxdata:2048000000 -bmaxstack:1500000000"
-    LIBS="-lessl -bbinder:/usr/lib/bind"
-    ;;
-
-  "IBM-SP4")
-    FC="xlf90 -O3 -qstrict  -qarch=pwr4 -qxlf77=leadzero "
-    FFLAGS="-WF,\"-D__AIX,-DFFT_ESSL\" -qsuffix=cpp=F -qmaxmem=32768 "
-    LFLAGS="-O3 -bmaxdata:2048000000 -bmaxstack:1500000000"
-    LIBS="-lessl -bbinder:/usr/lib/bind"
-    ;;
-
-  "IBM-PWR5-AIX")
-    FC="xlf90 -O3 -qstrict  -qarch=pwr5 -qxlf77=leadzero "
-    FFLAGS="-WF,\"-D__AIX,-DFFT_ESSL\" -qsuffix=cpp=F -qmaxmem=32768 "
-    LFLAGS="-O3 "
-    LIBS="-lessl "
-    ;;
-
   "IBM-PWR6-AIX")
     FC="xlf90 -O3 -qstrict  -qarch=pwr6 -qxlf77=leadzero "
     FFLAGS="-WF,\"-D__AIX,-DFFT_ESSL\" -qsuffix=cpp=F -qmaxmem=32768 "
@@ -258,20 +226,6 @@ case ${CONFIGURATION}
     FFLAGS="-WF,\"-D__AIX,-DFFT_ESSL\" -qsuffix=cpp=F -qmaxmem=131072 "
     LFLAGS="-O2 "
     LIBS="-lessl "
-    ;;
-
-  "IBM-PWR5-Linux")
-    FC="xlf90 -O3 -qstrict  -qarch=pwr5 -qxlf77=leadzero "
-    FFLAGS="-WF,\"-D__PWRLinux,-DFFT_ESSL\" -qsuffix=cpp=F -qmaxmem=32768 "
-    LFLAGS="-O3 "
-    LIBS="-lessl "
-    ;;
-
-  "IBM-BGL-FEN")
-    FC="xlf90 -O3 -qstrict  -qarch=auto -qxlf77=leadzero "
-    FFLAGS="-WF,\"-D__PWRLinux,-DFFT_FFTW\" -qsuffix=cpp=F -qmaxmem=32768 "
-    LFLAGS="-O3 "
-    LIBS="-lfftw "
     ;;
 
   "IBM-BGP-FEN")
@@ -302,43 +256,6 @@ case ${CONFIGURATION}
     LIBS="-mkl=sequential"
     ;;
 
-  "Hitachi-SR8000-Europe")
-    FC="f90"
-    FFLAGS="-D__SR8000 -DFFT_DEFAULT -W0,\"opt(o(ss))\" -64 -noparallel -free"
-    LFLAGS="-64 -noparallel"
-    LIBS=""
-    ;;
-
-  "Hitachi-SR8000-Japan")
-    FC="xf90"
-    FFLAGS="-D__SR8000 -DFFT_DEFAULT -Os -64 -noparallel -free"
-    LFLAGS="-64 -noparallel -free"
-    LIBS=""
-    ;;
-
-  "Hitachi-SR11000-J1")
-    FC="f90"
-    FFLAGS="-D__SR11000 -DFFT_DEFAULT -O3 -64 -model=J1 -nolimit -noparallel -free"
-    LFLAGS="-64 -model=J1 -nolimit -noparallel -free"
-    LIBS=""
-    ;;
-
-  "Hitachi-SR11000-K1")
-    FC="f90"
-    FFLAGS="-D__SR11000 -DFFT_DEFAULT -O3 -64 -model=K1 -nolimit -noparallel -free"
-    LFLAGS="-64 -model=K1 -nolimit -noparallel -free"
-    LIBS=""
-    ;;
-
-  "Fujitsu-VPP5000-Japan")
-    FC="vppfrt"
-# if frt is not recognized by your machine, try vppfrt
-    FC="frt"
-    FFLAGS="-Wp,-D__VPP5000,-DFFT_DEFAULT -Am -Aw -Sw -c -O5 -Kfast -X9 -Free -No -Os,-X,-I"
-    LFLAGS=
-    LIBS="-lblasvp"
-    ;;
-
   "Fujitsu-PRIMERGY")
     FC="frt"
     FFLAGS="-D__PRIMERGY -DFFT_DEFAULT -Aw -Kfast -X9 -Kocl -Qp -Esfu"
@@ -360,13 +277,6 @@ case ${CONFIGURATION}
     LIBS="-SSL2BLAMP -lblasvp"
     ;;
 
-  "SGI-Origin-2000")
-    FC="f90 -freeform"
-    FFLAGS="-D__SGI -DFFT_DEFAULT -O3 -64 -mips4"
-    LFLAGS="-64 -mips4"
-    LIBS=""
-    ;;
-
   "SGI-ALTIX3900")
     FC="ifort -O3 -r8 -free -align dcommons -unroll -cm"
     FFLAGS="-D__Linux -D__ALTIX -DFFT_DEFAULT -DPOINTER8"
@@ -374,21 +284,7 @@ case ${CONFIGURATION}
     LIBS=""
     ;; 
 
-  "DEC-Alpha")
-    FC="f90"
-    FFLAGS="-D__alpha -DFFT_DEFAULT -free"
-    LFLAGS="-O"
-    LIBS=""
-    ;;
-
-  SUN-ULTRA3-32*)
-    FC="f90"
-    FFLAGS=" -D__SUN -DFFT_DEFAULT  -fast -free -fns=no -xtarget=ultra3 -xarch=v8plusb"
-    LFLAGS="-xtarget=ultra3 -xarch=v8plusb -fast"
-    LIBS="-xlibmopt "
-    ;;
-
-  SUN-ULTRA3-64*)
+  "SUN-ULTRA3-64")
     FC="f90"
     FFLAGS=" -D__SUN -DFFT_DEFAULT  -fast -free -fns=no -xtarget=ultra3 -xarch=v8plusb"
     LFLAGS="-xtarget=ultra3 -xarch=v9b -fast"
@@ -407,17 +303,6 @@ case ${CONFIGURATION}
     FFLAGS=" -ffree-form -D__GFORTRAN -DFFT_DEFAULT -O2 "
     LFLAGS="-O3 "
     LIBS="-framework Accelerate"
-    ;;
-
-  "NEC-SX5")
-    FC="sxf90"
-    FFLAGS="-D__NEC -USX -DFFT_DEFAULT  -sx5 -ew -float0 -f0 -Nftrace \
-            -V -R5 -Cvopt -Pstatic -pi -I /sx5/usr/include \
-            -Wf\"-pvctl noassume loopcnt=99999999 fullmsg vr256 \
-             vwork=static vworksz=4M novlchk noverrchk\" "
-    LFLAGS="-sx5 -ew -float0 -f4 -Nftrace -Pstatic -V -R5 -Cvopt -Cssafe \
-           -Wl\"-h lib_cyclic -h muldefs\" "
-    LIBS=""
     ;;
 
   "NEC-SX6")
@@ -521,8 +406,8 @@ FFLAGS	= ${FFLAGS}
 LFLAGS	= ${LFLAGS}
 LIBS	= ${LIBS}
 # uncomment and set only if needed
-#CC	= cc
-#CFLAGS	= 
+#CC	= ${CC}
+#CFLAGS	= -Wno-error=int-conversion
 #--------------- End of Configuration
 EOF
 fi

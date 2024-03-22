@@ -713,12 +713,7 @@ SUBROUTINE args ( iarg, argc, nn, nrep, shft, singleprecision, &
   argc = iargc()
 #endif
 
-#if defined ( __SR8000 ) || defined ( __SR11000 )
-! Due to an "incompatible" counting of arguments in Hitachi machines
-  iarg = 2
-#else
   iarg = 1
-#endif
   
   fname_out_basis = ''        ! default values
   args_left = .TRUE.

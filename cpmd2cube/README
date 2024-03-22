@@ -11,22 +11,23 @@ the Configure program. Here is the corresponding help message:
 where the name of the configuration is
   Linux-PC-GFORTRAN       Linux-PC-GFORTRAN-FFTW
   Linux-PC-IFORT          Linux-PC-IFORT-FFTW
-  Linux-PC-PGI            Linux-PC-IFC7
-  Linux-Alpha             Hitachi-SR8000-Europe
-  Linux-AMD64-PGI         Hitachi-SR8000-Japan
-  Linux-AMD64-IFORT       Hitachi-SR11000-J1
-  Linux-Itanium2-IFORT    Hitachi-SR11000-K1
-  IBM-SP3                 IBM-SP4
-  IBM-AIX                 Cray-T3E
-  IBM-270                 Fujitsu-VPP5000-Japan
-  DEC-Alpha               SGI-Origin-2000
-  MAC-OSX-G5              SGI-ALTIX3900
-  NEC-SX5                 SUN-ULTRA3-32bit
-  NEC-SX6                 SUN-ULTRA3-64bit
-  IBM-PWR5-Linux          NEC-SX6-ES
-  IBM-BGL-FEN             IBM-PWR5-AIX
-  IBM-BGP-FEN             IBM-PWR6-AIX
-
+  Linux-PC-IFX-LLVM       Linux-PC-IFX-LLVM-FFTW
+  Linux-PC-PGI            
+  Linux-AMD64-IFORT       Linux-AMD64-PGI
+  Linux-IA64-IFORT        
+  Fujitsu-PRIMERGY        Fujitsu-PRIMEQUEST
+  Fujitsu-FX10
+  NEC-SX6                 NEC-SX6-ES
+  NEC-SX7
+  SUN-ULTRA3-64bit
+  IBM-PWR6-AIX            IBM-PWR6-AIX
+  IBM-PWR7-Linux          IBM-PWR7-AIX 
+  IBM-BGP-FEN             IBM-BGQ-FEN
+  IBM-AIX                 IBM-x3750-Intel
+  IBM-270                 
+  Cray-T3E
+  SGI-ALTIX3900           
+  MAC-OSX-G5
 
 Description of options:
   -makefile (-m) Create the file Makefile in DEST directory
